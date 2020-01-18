@@ -1,5 +1,5 @@
 # aws-cloudformation script for highly avaliable Bastion Host 
-The task is code highly avaliable Bastion Host (linux ec2 instance) with the requirements below
+The task is to code highly avaliable Bastion Host (linux ec2 instance) with the requirements below
 - We need to be able to choose VPC, Subnets, Instance type, Instance AMI ID and Key Name for the host
 - After termination, the host has to be automatically relaunched in a different AZ
 - The host has to have the same puplic IP address, even after termination
