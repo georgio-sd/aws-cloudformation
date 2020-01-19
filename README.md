@@ -1,4 +1,4 @@
-# AWS-cloudformation script for Highly Available Bastion Host
+# AWS-Cloudformation script for Highly Available Bastion Host
 The task is to code highly available Bastion Host (linux ec2 instance) with the requirements below
 - You need to be able to choose VPC, Subnets, Instance type, Instance AMI ID and Key Name for the host
 - After termination, the host has to be automatically relaunched in a different AZ
