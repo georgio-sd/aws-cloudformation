@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Network Configuration"
+        Parameters: 
+          - VpcName
+          - SubnetNames
+      - 
+        Label: 
+          default: "Amazon EC2 Configuration"
+        Parameters: 
+          - InstanceType
+          - InstanceAmiId
+          - KeyName
+Parameters:
+  VpcName:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC Identifier
+  SubnetNames:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Description: Subnet Identifier 
+  InstanceType:
+    Type: String
+    Description: Bastion EC2 instance type
+    Default: t2.micro
+    AllowedValues: [t2.nano, t2.micro, t2.small]
+    ConstraintDescription: must be a valid EC2 instance type.
+  InstanceAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: Bastion EC2 instance AMI
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Key Name
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+Resources:
+  IPAddress:
+    Type: AWS::EC2::EIP
+    Properties:    
+      Tags:
+      - Key: Name
+        Value: Bastion-HA
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Bastion-HA-SSH
+      GroupDescription: Bastion-HA-SSH
+      VpcId: !Ref 'VpcName'
+      Tags:
+      - Key: Name
+        Value: Bastion-HA
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 0.0.0.0/0
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action: sts:AssumeRole
+      Path: "/"
+      RoleName: Bastion-HA-Role
+      Tags:
+      - Key: Name
+        Value: Bastion-HA
+  AssociateAddressPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: AssociateAddress
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Action:
+          - 'ec2:AssociateAddress'
+          Resource: '*'
+      Roles:
+      - !Ref InstanceRole      
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: Bastion-HA-InstanceProfile
+      Path: "/"
+      Roles:
+      - !Ref InstanceRole
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref InstanceAmiId
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      KeyName:
+        Ref: KeyName
+      SecurityGroups: 
+      - Ref: InstanceSecurityGroup
+      InstanceType:
+        Ref: InstanceType
+      LaunchConfigurationName: Bastion-HA-LaunchConfiguration
+      UserData:
+        Fn::Base64: !Sub 
+        - |
+          #!/bin/bash
+          instid=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+          aws ec2 associate-address --instance-id $instid --allocation-id ${eipid} --region ${AWS::Region}
+        - eipid: !GetAtt IPAddress.AllocationId
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      AutoScalingGroupName: Bastion-HA-AutoScalingGroup
+      DesiredCapacity: 1
+      LaunchConfigurationName: !Ref LaunchConfig
+      MaxSize: 1
+      MinSize: 1
+      Tags: 
+      - Key: Name
+        Value: Bastion-HA
+        PropagateAtLaunch: True
+      VPCZoneIdentifier: !Ref SubnetNames
