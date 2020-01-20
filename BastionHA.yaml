@@ -36,7 +36,7 @@ Parameters:
   SpotMaxPrice:
     Type: String
     Default: '0.0116'
-    Description: Max hourly price for a spot instance ($), put 0 if you want to use an on demand instance
+    Description: Max hourly price for a spot instance ($), set 0 if you want to use an on demand instance
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Key Name
