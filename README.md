@@ -7,4 +7,4 @@ The task was to code highly available Bastion Host (linux ec2 instance) with the
 - All new resources have to be taged and/or named to let us know that they belong to this project
 <br>
 <br>
-If you want to use a spot instance, you need to check the number of spot instance limit in your account. By default this number is zero and you need to request limit increase.
+If you want to use a spot instance, you need to check the number of spot instance limit in your account. By default, this number is zero and you need to request a limit increase.
