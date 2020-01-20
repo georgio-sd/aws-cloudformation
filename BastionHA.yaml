@@ -14,6 +14,7 @@ Metadata:
         Parameters: 
           - InstanceType
           - InstanceAmiId
+          - SpotMaxPrice
           - KeyName
 Parameters:
   VpcName:
@@ -32,10 +33,16 @@ Parameters:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
     Description: Bastion EC2 instance AMI
+  SpotMaxPrice:
+    Type: String
+    Default: '0.0116'
+    Description: Max hourly price for a spot instance ($), put 0 if you want to use an on demand instance
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Key Name
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
+Conditions:
+  UseSpot: !Not [!Equals [!Ref SpotMaxPrice, '0']]
 Resources:
   IPAddress:
     Type: AWS::EC2::EIP
@@ -48,7 +55,7 @@ Resources:
     Properties:
       GroupName: Bastion-HA-SSH
       GroupDescription: Bastion-HA-SSH
-      VpcId: !Ref 'VpcName'
+      VpcId: !Ref VpcName
       Tags:
       - Key: Name
         Value: Bastion-HA
@@ -106,6 +113,7 @@ Resources:
       InstanceType:
         Ref: InstanceType
       LaunchConfigurationName: Bastion-HA-LaunchConfiguration
+      SpotPrice: !If [UseSpot, !Ref SpotMaxPrice, !Ref 'AWS::NoValue']
       UserData:
         Fn::Base64: !Sub 
         - |
